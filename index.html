@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<title>Web3 DApp Template</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;}
+        h1{font-size:2.8em;font-weight:800;background:linear-gradient(90deg,#00f5ff,#7000ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
+        p{color:#aaa;margin:20px 0;max-width:600px;}
+        button{padding:16px 32px;margin:12px;background:linear-gradient(45deg,#7000ff,#00f5ff);border:none;border-radius:50px;color:white;font-size:18px;font-weight:600;cursor:pointer;transition:0.3s;min-width:280px;}
+        button:hover{transform:scale(1.05);}
+        button:disabled{background:#333;cursor:not-allowed;}
+        #message{margin:30px;padding:25px;background:rgba(0,245,255,0.1);border:1px solid #00f5ff;border-radius:15px;font-size:1.3em;min-height:80px;display:flex;align-items:center;justify-content:center;}
+        #status{color:#0f0;font-weight:600;}
+    </style>
+</head>
+<body>
+    <h1>Web3 DApp Template</h1>
+    <p>Live smart contract interaction • Solidity + Web3.js<br>Ethereum Sepolia Testnet • Ready for production</p>
+    
+    <button id="connect">Connect Wallet</button>
+    <button id="read" disabled>Fetch Live Data</button>
+    
+    <div id="status"></div>
+    <div id="message">Connect your wallet to read on-chain data</div>
+
+    <script>
+        const contractAddress = "0xf8e81D47203A594245E36C48e151709F0C19fBe8";
+        const abi = [{"inputs":[],"name":"greet","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+
+        let web3, contract, account;
+
+        document.getElementById('connect').onclick = async () => {
+            if (!window.ethereum) return document.getElementById('status').innerHTML = "MetaMask required";
+            try {
+                web3 = new Web3(window.ethereum);
+                await window.ethereum.request({method:'eth_requestAccounts'});
+                account = (await web3.eth.getAccounts())[0];
+                contract = new web3.eth.Contract(abi, contractAddress);
+                document.getElementById('status').innerHTML = "Connected: " + account.slice(0,8)+"...";
+                document.getElementById('connect').disabled = true;
+                document.getElementById('read').disabled = false;
+            } catch(e){document.getElementById('status').innerHTML = "Failed: "+e.message;}
+        };
+
+        document.getElementById('read').onclick = async () => {
+            try {
+                const data = await contract.methods.greet().call();
+                document.getElementById('message').innerHTML = "<strong>Live from Blockchain:</strong><br><br>“"+data+"”";
+            } catch(e){document.getElementById('message').innerHTML = "Error: Invalid contract/network";}
+        };
+    </script>
+</body>
+</html>
