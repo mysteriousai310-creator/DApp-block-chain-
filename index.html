@@ -1,59 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-<title>Web3 DApp Template</title>
-    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <style>
-        *{margin:0;padding:0;box-sizing:border-box;}
-        body{font-family:'Inter',sans-serif;background:#0f0f1a;color:#fff;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center;}
-        h1{font-size:2.8em;font-weight:800;background:linear-gradient(90deg,#00f5ff,#7000ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
-        p{color:#aaa;margin:20px 0;max-width:600px;}
-        button{padding:16px 32px;margin:12px;background:linear-gradient(45deg,#7000ff,#00f5ff);border:none;border-radius:50px;color:white;font-size:18px;font-weight:600;cursor:pointer;transition:0.3s;min-width:280px;}
-        button:hover{transform:scale(1.05);}
-        button:disabled{background:#333;cursor:not-allowed;}
-        #message{margin:30px;padding:25px;background:rgba(0,245,255,0.1);border:1px solid #00f5ff;border-radius:15px;font-size:1.3em;min-height:80px;display:flex;align-items:center;justify-content:center;}
-        #status{color:#0f0;font-weight:600;}
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Web3 DApp • Multi Blockchain & Wallet Support</title>
+<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+<style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:#0e0e17;color:#fff;
+         min-height:100vh;display:flex;flex-direction:column;
+         align-items:center;justify-content:center;padding:20px;text-align:center;}
+    h1{font-size:2.8em;font-weight:800;
+       background:linear-gradient(90deg,#00f5ff,#7000ff);
+       -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
+    p{color:#aaa;margin:20px 0;max-width:600px;}
+    button{padding:16px 32px;margin:12px;background:linear-gradient(45deg,#7000ff,#00f5ff);
+       border:none;border-radius:50px;color:white;font-size:18px;font-weight:600;
+       cursor:pointer;transition:0.3s;min-width:280px;}
+    button:hover{transform:scale(1.05);}
+    button:disabled{background:#333;cursor:not-allowed;}
+    #message{margin:30px;padding:25px;background:rgba(0,245,255,0.1);
+       border:1px solid #00f5ff;border-radius:15px;font-size:1.3em;min-height:80px;
+       display:flex;align-items:center;justify-content:center;}
+    #status{color:#0f0;font-weight:600;margin-top:10px;}
+</style>
 </head>
 <body>
-    <h1>Web3 DApp Template</h1>
-    <p>Live smart contract interaction • Solidity + Web3.js<br>Ethereum Sepolia Testnet • Ready for production</p>
-    
-    <button id="connect">Connect Wallet</button>
-    <button id="read" disabled>Fetch Live Data</button>
-    
-    <div id="status"></div>
-    <div id="message">Connect your wallet to read on-chain data</div>
 
-    <script>
-        const contractAddress = "0xf8e81D47203A594245E36C48e151709F0C19fBe8";
-        const abi = [{"inputs":[],"name":"greet","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+<h1>DApp • Multi Blockchain & Wallet</h1>
+<p>Interact with multiple blockchains like Ethereum, BSC, Polygon, and more.</p>
 
-        let web3, contract, account;
+<button id="connect">Connect Wallet</button>
+<button id="read" disabled>Fetch Blockchain Data</button>
 
-        document.getElementById('connect').onclick = async () => {
-            if (!window.ethereum) return document.getElementById('status').innerHTML = "MetaMask required";
-            try {
-                web3 = new Web3(window.ethereum);
-                await window.ethereum.request({method:'eth_requestAccounts'});
-                account = (await web3.eth.getAccounts())[0];
-                contract = new web3.eth.Contract(abi, contractAddress);
-                document.getElementById('status').innerHTML = "Connected: " + account.slice(0,8)+"...";
-                document.getElementById('connect').disabled = true;
-                document.getElementById('read').disabled = false;
-            } catch(e){document.getElementById('status').innerHTML = "Failed: "+e.message;}
-        };
+<div id="status"></div>
+<div id="message">Waiting for wallet connection...</div>
 
-        document.getElementById('read').onclick = async () => {
-            try {
-                const data = await contract.methods.greet().call();
-                document.getElementById('message').innerHTML = "<strong>Live from Blockchain:</strong><br><br>“"+data+"”";
-            } catch(e){document.getElementById('message').innerHTML = "Error: Invalid contract/network";}
-        };
-    </script>
+<script>
+// Supported networks (Ethereum Mainnet, Sepolia, BSC, Polygon, etc.)
+const supportedNetworks = {
+    "1": "Ethereum Mainnet",
+    "11155111": "Sepolia Testnet",
+    "56": "Binance Smart Chain",
+    "137": "Polygon"
+};
+
+// Your contract (Sepolia - chain ID 11155111)
+const contractAddress = "0xd9145CCE52D386f254917e481eB44e9943F39138";
+const abi = [
+    {
+        "inputs": [],
+        "name": "greet",
+        "outputs": [{"internalType": "string","name": "","type": "string"}],
+        "stateMutability": "view",
+        "type": "function"
+    }
+];
+
+let web3, contract, account, networkId;
+
+// Function to check and switch to the desired network
+async function checkAndSwitchNetwork(currentChainId) {
+    if (supportedNetworks[currentChainId]) {
+        document.getElementById("status").innerHTML = "Connected to " + supportedNetworks[currentChainId];
+        return true; // Supported
+    } else {
+        document.getElementById("status").innerHTML = "Network not supported. Please switch to Sepolia (Testnet) or Ethereum Mainnet.";
+        return false; // Not supported
+    }
+}
+
+document.getElementById("connect").onclick = async () => {
+    if (typeof window.ethereum === "undefined") {
+        return document.getElementById("status").innerHTML = "MetaMask or Web3 wallet not detected!";
+    }
+
+    web3 = new Web3(window.ethereum);
+
+    try {
+        // Request accounts
+        await window.ethereum.request({ method: "eth_requestAccounts" });
+        account = await web3.eth.getAccounts();
+        networkId = await web3.eth.net.getId();
+
+        // Check if network is supported and prompt user to switch
+        const isSupported = await checkAndSwitchNetwork(networkId);
+        if (isSupported) {
+            // Connect contract
+            contract = new web3.eth.Contract(abi, contractAddress);
+            document.getElementById("status").innerHTML = "Connected: " + account[0].slice(0, 10) + "...";
+            document.getElementById("connect").disabled = true;
+            document.getElementById("read").disabled = false;
+        }
+
+    } catch (err) {
+        document.getElementById("status").innerHTML = "Error: " + err.message;
+    }
+};
+
+document.getElementById("read").onclick = async () => {
+    if (!contract) {
+        document.getElementById("message").innerHTML = "Connect wallet first";
+        return;
+    }
+    try {
+        const data = await contract.methods.greet().call();
+        document.getElementById("message").innerHTML =
+            "<strong>Blockchain says:</strong><br><br> \"" + data + "\"";
+    } catch (err) {
+        document.getElementById("message").innerHTML = "Error reading contract. Make sure you're on Sepolia or Ethereum Mainnet.";
+    }
+};
+</script>
+
 </body>
 </html>
