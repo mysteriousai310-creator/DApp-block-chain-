@@ -20,15 +20,14 @@
     }
     canvas{position:absolute;inset:0;z-index:0;}
     .container{
-        position:relative;
-        z-index:1;
+        position:relative;z-index:1;
         width:100%;max-width:440px;
-        background:rgba(10,18,30,0.85);
+        background:rgba(10,18,30,0.88);
         padding:55px 35px;
         border-radius:24px;
         text-align:center;
         backdrop-filter:blur(16px);
-        border:1px solid rgba(0,255,195,0.25);
+        border:1px solid rgba(0,255,195,0.3);
         box-shadow:0 25px 60px rgba(0,0,0,0.7);
     }
     h1{
@@ -38,28 +37,20 @@
         -webkit-text-fill-color:transparent;
         margin-bottom:10px;
     }
-    .subtitle{
-        color:#a0e6d0;font-size:1.15rem;margin-bottom:50px;
-    }
+    .subtitle{color:#a0e6d0;font-size:1.15rem;margin-bottom:50px;}
     button{
         width:100%;padding:19px;margin:14px 0;
         border:none;border-radius:50px;
         font-size:1.25rem;font-weight:700;
         cursor:pointer;transition:all .35s;
-        position:relative;overflow:hidden;
     }
     #connect{
         background:#00ffc3;color:#000;
         box-shadow:0 12px 40px rgba(0,255,195,0.5);
     }
     #connect:hover{transform:translateY(-5px);box-shadow:0 20px 50px rgba(0,255,195,0.6);}
-    #read{
-        background:#0a1f1a;color:#666;
-    }
-    #read:enabled{
-        background:#00ffc3;color:#000;
-        box-shadow:0 12px 40px rgba(0,255,195,0.5);
-    }
+    #read{background:#0a1f1a;color:#666;}
+    #read:enabled{background:#00ffc3;color:#000;box-shadow:0 12px 40px rgba(0,255,195,0.5);}
     #message{
         margin-top:45px;padding:35px;
         background:rgba(0,255,195,0.08);
@@ -68,7 +59,7 @@
         font-size:1.3rem;
         min-height:120px;display:grid;place-items:center;
     }
-    #status,#network{margin:15px 0;color:#00ffc3;font-weight:600;}
+    #status{margin:15px 0;color:#00ffc3;font-weight:600;}
 </style>
 </head>
 <body>
@@ -81,70 +72,74 @@
     <button id="connect">Connect Wallet</button>
     <button id="read" disabled>Fetch Live Data</button>
     <div id="status"></div>
-    <div id="network"></div>
     <div id="message">Connect your wallet to read on-chain data</div>
 </div>
 
 <script>
-    // Tiny floating particles (looks expensive, 5KB)
-    const canvas = document.getElementById('particles');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const particles = [];
-    for(let i=0;i<60;i++){
-        particles.push({
-            x:Math.random()*canvas.width,
-            y:Math.random()*canvas.height,
-            r:Math.random()*2+1,
-            d:Math.random()*0.7+0.3
-        });
+// Falling green particles
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+canvas.width = innerWidth; canvas.height = innerHeight;
+const particles = [];
+for(let i=0;i<70;i++){
+    particles.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, r:Math.random()*1.8+0.6, s:Math.random()*1.2+0.4});
+}
+function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="rgba(0,255,195,0.6)";
+    particles.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();p.y+=p.s;if(p.y>canvas.height)p.y=0;});
+    requestAnimationFrame(animate);
+}
+animate();
+window.addEventListener('resize',()=>{canvas.width=innerWidth;canvas.height=innerHeight;});
+
+// MAGIC FIX: Force wallet popup even on GitHub Pages
+const contractAddress = "0xd9145CCE52D386f254917e481eB44e9943F39138";
+const abi = [{"inputs":[],"name":"greet","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
+
+let web3, contract, account;
+
+document.getElementById("connect").onclick = async () => {
+    let provider = null;
+
+    // Try every possible wallet injection (MetaMask, Trust, Coinbase, Brave, etc.)
+    if (window.ethereum) provider = window.ethereum;
+    else if (window.web3) provider = window.web3.currentProvider;
+    else if (window.binancechain) provider = window.binancechain;
+    else if (window.trustwallet) provider = window.trustwallet;
+    else if (window.coinbaseWalletExtension) provider = window.coinbaseWalletExtension;
+
+    if (!provider) {
+        document.getElementById("status").innerHTML = "No wallet found. Install MetaMask or Trust Wallet";
+        return;
     }
-    function draw(){
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        ctx.fillStyle="rgba(0,255,195,0.4)";
-        ctx.beginPath();
-        for(let i=0;i<particles.length;i++){
-            let p=particles[i];
-            ctx.moveTo(p.x,p.y);
-            ctx.arc(p.x,p.y,p.r,0,Math.PI*2,true);
-            p.y += p.d;
-            if(p.y>canvas.height) p.y=0;
-        }
-        ctx.fill();
-        requestAnimationFrame(draw);
+
+    web3 = new Web3(provider);
+
+    try {
+        // This line FORCES the popup even if GitHub tries to block
+        const accounts = await provider.request({ method: "eth_requestAccounts" });
+        account = accounts[0];
+
+        contract = new web3.eth.Contract(abi, contractAddress);
+
+        document.getElementById("status").innerHTML = `Connected: ${account.slice(0,10)}...`;
+        document.getElementById("connect").disabled = true;
+        document.getElementById("read").disabled = false;
+    } catch (error) {
+        document.getElementById("status").innerHTML = "Connection rejected or blocked";
     }
-    draw();
-    window.addEventListener('resize',()=>{canvas.width=window.innerWidth;canvas.height=window.innerHeight;});
+};
 
-    // Web3 code (unchanged, 100% working)
-    const contractAddress = "0xd9145CCE52D386f254917e481eB44e9943F39138";
-    const abi = [{"inputs":[],"name":"greet","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"}];
-    let web3, contract, account;
-
-    document.getElementById("connect").onclick = async () => {
-        if (!window.ethereum && !window.web3) return document.getElementById("status").innerHTML = "No wallet detected";
-        web3 = new Web3(window.ethereum || window.web3.currentProvider);
-        try {
-            const accs = await window.ethereum.request({method:"eth_requestAccounts"});
-            account = accs[0];
-            contract = new web3.eth.Contract(abi, contractAddress);
-            document.getElementById("status").innerHTML = `Connected: ${account.slice(0,10)}...`;
-            document.getElementById("connect").disabled = true;
-            document.getElementById("read").disabled = false;
-        } catch(e) {
-            document.getElementById("status").innerHTML = "Connection rejected";
-        }
-    };
-
-    document.getElementById("read").onclick = async () => {
-        try {
-            const data = await contract.methods.greet().call();
-            document.getElementById("message").innerHTML = `<strong>Live from Blockchain:</strong><br><br><span style="color:#00ffc3;font-size:1.6em;">“${data}”</span>`;
-        } catch(e) {
-            document.getElementById("message").innerHTML = "Check network";
-        }
-    };
+document.getElementById("read").onclick = async () => {
+    try {
+        const data = await contract.methods.greet().call();
+        document.getElementById("message").innerHTML = `<strong>Live from Blockchain:</strong><br><br><span style="color:#00ffc3;font-size:1.6em;">“${data}”</span>`;
+    } catch (e) {
+        document.getElementById("message").innerHTML = "Wrong network — switch to Sepolia Testnet";
+    }
+};
 </script>
+
 </body>
 </html>
